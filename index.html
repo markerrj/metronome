@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Metronome</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #1a1a1a;
+      font-family: sans-serif;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .metronome-circle {
+      width: 75vmin;
+      height: 75vmin;
+      border: 8px solid #000;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f5f5f5;
+      transition: border-color 0.1s ease;
+    }
+
+    .metronome-circle.flash-green {
+      border-color: #00cc00;
+    }
+
+    .metronome-circle.flash-green-heavy {
+      border-color: #00ff00;
+    }
+
+    .bpm-container {
+      position: relative;
+    }
+
+    #bpmInput {
+      width: 180px;
+      height: 120px;
+      font-size: 72px;
+      text-align: center;
+      border: none;
+      outline: none;
+      background-color: transparent;
+      color: #333;
+      font-weight: bold;
+    }
+
+    #bpmInput:hover,
+    #bpmInput:focus {
+      outline: none;
+    }
+
+    .hover-glow {
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+      border: none;
+    }
+
+    #playPauseBtn {
+      margin-top: 40px;
+      padding: 20px 60px;
+      font-size: 28px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #333;
+      color: #fff;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    #playPauseBtn:hover {
+      background-color: #444;
+    }
+
+    #playPauseBtn:active {
+      transform: scale(0.98);
+    }
+
+    #playPauseBtn.playing {
+      background-color: #d32f2f;
+    }
+
+    #playPauseBtn.playing:hover {
+      background-color: #e53935;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="metronome-circle" id="circle">
+      <input type="text" id="bpmInput" value="100" maxlength="3" autocomplete="off">
+    </div>
+    <button id="playPauseBtn" class="playing">Pause</button>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // DOM elements
+      const circle = document.getElementById('circle');
+      const bpmInput = document.getElementById('bpmInput');
+      const playPauseBtn = document.getElementById('playPauseBtn');
+
+      // State
+      let isRunning = true;
+      let bpm = 100;
+      let audioContext = null;
+      let nextClickTime = 0;
+      let clickCount = 0;
+      let timerId = null;
+      let originalBpmValue = bpm;
+
+      // Constants
+      const MIN_BPM = 30;
+      const MAX_BPM = 300;
+
+      // Initialize AudioContext on first user interaction
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      // Play click sound
+      function playClickSound() {
+        if (!audioContext) return;
+
+        const osc = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        osc.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        osc.frequency.value = 1000;
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + 0.12);
+      }
+
+      // Flash the circle green
+      function flashCircle(isHeavyBeat) {
+        initAudio();
+        playClickSound();
+
+        circle.classList.remove('flash-green', 'flash-green-heavy');
+
+        // Trigger reflow to restart animation
+        void circle.offsetWidth;
+
+        if (isHeavyBeat) {
+          circle.classList.add('flash-green-heavy');
+        } else {
+          circle.classList.add('flash-green');
+        }
+
+        // Remove flash after animation
+        setTimeout(() => {
+          circle.classList.remove('flash-green', 'flash-green-heavy');
+        }, 100);
+
+        clickCount++;
+      }
+
+      // Schedule next click using precise timing
+      function scheduleNextClick() {
+        if (!isRunning) return;
+
+        const intervalMs = 60000 / bpm;
+        nextClickTime = audioContext.currentTime * 1000 + intervalMs;
+
+        // Schedule the click to happen at the exact calculated time
+        setTimeout(() => {
+          if (isRunning) {
+            const isHeavyBeat = clickCount % 4 === 3;
+            flashCircle(isHeavyBeat);
+          }
+          scheduleNextClick();
+        }, intervalMs - 10);
+      }
+
+      // Start/stop the metronome
+      function togglePlayPause() {
+        initAudio();
+
+        if (isRunning) {
+          isRunning = false;
+          playPauseBtn.textContent = 'Play';
+          playPauseBtn.classList.remove('playing');
+        } else {
+          isRunning = true;
+          playPauseBtn.textContent = 'Pause';
+          playPauseBtn.classList.add('playing');
+
+          if (audioContext.state === 'suspended') {
+            audioContext.resume();
+          }
+
+          clickCount = 0;
+          
+          // Start the scheduling loop immediately
+          scheduleNextClick();
+        }
+      }
+
+      // Validate and update BPM
+      function setBpm(value) {
+        const parsed = parseInt(value, 10);
+
+        if (isNaN(parsed)) {
+          bpm = originalBpmValue;
+          bpmInput.value = originalBpmValue;
+          return false;
+        }
+
+        if (parsed < MIN_BPM) {
+          bpm = MIN_BPM;
+          bpmInput.value = MIN_BPM;
+        } else if (parsed > MAX_BPM) {
+          bpm = MAX_BPM;
+          bpmInput.value = MAX_BPM;
+        } else {
+          bpm = parsed;
+        }
+
+        originalBpmValue = bpm;
+        return true;
+      }
+
+      // Event listeners for BPM input
+      function handleBpmInput() {
+        const value = bpmInput.value;
+
+        if (value === '') {
+          // Empty input - show current BPM
+          bpmInput.value = originalBpmValue;
+          return;
+        }
+
+        const parsed = parseInt(value, 10);
+
+        if (!isNaN(parsed) && parsed >= MIN_BPM && parsed <= MAX_BPM) {
+          bpm = parsed;
+          originalBpmValue = bpm;
+
+          // Update display if running to reflect new tempo
+          if (isRunning && audioContext) {
+            const intervalMs = 60000 / bpm;
+            nextClickTime = audioContext.currentTime * 1000 + intervalMs;
+          }
+        } else if (parsed < MIN_BPM || parsed > MAX_BPM) {
+          // Clamp to valid range
+          if (parsed < MIN_BPM) {
+            bpm = MIN_BPM;
+          } else {
+            bpm = MAX_BPM;
+          }
+          originalBpmValue = bpm;
+        }
+
+        bpmInput.value = bpm;
+      }
+
+      function handleBpmFocus() {
+        originalBpmValue = bpm;
+        circle.classList.add('hover-glow');
+      }
+
+      function handleBpmBlur() {
+        circle.classList.remove('hover-glow');
+      }
+
+      function handleBpmKeydown(e) {
+        if (e.key === 'Enter') {
+          handleBpmInput();
+          bpmInput.blur();
+        } else if (e.key === 'Escape') {
+          bpmInput.value = originalBpmValue;
+        }
+      }
+
+      // Mouse wheel handling for BPM adjustment
+      let lastScrollTime = 0;
+      let lastScrollDelta = 0;
+
+      function handleWheel(e) {
+        e.preventDefault();
+
+        const now = Date.now();
+        const delta = e.deltaY;
+
+        // Calculate scroll speed to determine increment size
+        if (now - lastScrollTime < 200) {
+          const speed = Math.abs(delta - lastScrollDelta);
+
+          if (speed > 50) {
+            // Fast scroll - change by 5 BPM
+            bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - Math.floor(delta / 10)));
+          } else {
+            // Slow scroll - change by 1 BPM
+            bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - (delta > 0 ? 1 : -1)));
+          }
+        } else {
+          // First scroll after pause - change by 1 BPM
+          bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - (delta > 0 ? 1 : -1)));
+        }
+
+        lastScrollTime = now;
+        lastScrollDelta = delta;
+
+        // Update display immediately
+        bpmInput.value = bpm;
+
+        // If running, update timing
+        if (isRunning && audioContext) {
+          const intervalMs = 60000 / bpm;
+          nextClickTime = audioContext.currentTime * 1000 + intervalMs;
+        }
+
+        originalBpmValue = bpm;
+      }
+
+      // Initialize
+      function init() {
+        playPauseBtn.addEventListener('click', togglePlayPause);
+
+        bpmInput.addEventListener('focus', handleBpmFocus);
+        bpmInput.addEventListener('blur', handleBpmBlur);
+        bpmInput.addEventListener('keydown', handleBpmKeydown);
+        bpmInput.addEventListener('wheel', handleWheel, { passive: false });
+
+        // Auto-start on page load
+        setBpm(100);
+        togglePlayPause();
+
+        // Handle audio context state changes
+        document.addEventListener('click', () => {
+          if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume();
+          }
+        }, { once: true });
+
+        document.addEventListener('keydown', (e) => {
+          if (document.activeElement === bpmInput && e.key === 'Enter') {
+            handleBpmInput();
+          } else if (document.activeElement === bpmInput && e.key === 'Escape') {
+            bpmInput.value = originalBpmValue;
+          }
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
