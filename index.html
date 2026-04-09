@@ -97,10 +97,6 @@
       outline-offset: 2px;
     }
 
-    .focus-glow {
-      box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
-    }
-
     #playPauseBtn {
       margin-top: 40px;
       padding: 20px 60px;
@@ -339,11 +335,9 @@
       function handleBpmFocus() {
         originalBpmValue = bpm;
         pendingBpmValue = bpm;
-        circle.classList.remove('focus-glow');
       }
 
       function handleBpmBlur() {
-        circle.classList.remove('focus-glow');
         const value = bpmInput.value;
         const parsed = parseInt(value, 10);
 
@@ -365,7 +359,6 @@
         } else if (e.key === 'Escape') {
           bpmInput.value = pendingBpmValue || originalBpmValue;
           bpmInput.blur();
-          circle.classList.remove('focus-glow');
         }
       }
 
