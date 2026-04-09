@@ -89,11 +89,11 @@
     .bpm-input:focus {
       outline: 3px solid rgba(0, 255, 0, 0.4);
       outline-offset: 2px;
-      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+      box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
     }
 
     .bpm-input:focus-visible {
-      outline: 3px solid #00ff00;
+      outline: 3px solid #808080;
       outline-offset: 2px;
     }
 
@@ -103,7 +103,7 @@
     }
 
     .hover-glow {
-      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+      box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
     }
 
     .bpm-input {
@@ -380,7 +380,7 @@
       function handleBpmFocus() {
         originalBpmValue = bpm;
         pendingBpmValue = bpm;
-        circle.classList.add('hover-glow');
+        circle.classList.remove('hover-glow');
       }
 
       function handleBpmBlur() {
@@ -412,6 +412,8 @@
           bpmInput.blur();
         } else if (e.key === 'Escape') {
           bpmInput.value = pendingBpmValue || originalBpmValue;
+          bpmInput.blur();
+          circle.classList.remove('hover-glow');
         }
       }
 
