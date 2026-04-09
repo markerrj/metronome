@@ -200,8 +200,6 @@
       function playClickSound(isHeavyBeat) {
         if (!audioContext) return;
 
-        console.log('playClickSound called with isHeavyBeat:', isHeavyBeat);
-
         const osc = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -212,7 +210,6 @@
 
         if (isHeavyBeat) {
           // For downbeat: Add high-frequency harmonics with a noise burst
-          console.log('Playing heavy downbeat with noise burst');
           const bufferSize = audioContext.sampleRate * 0.1; // 100ms buffer
           const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
           const data = buffer.getChannelData(0);
@@ -230,7 +227,6 @@
           noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
           noise.start(audioContext.currentTime);
         } else {
-          console.log('Playing regular click');
         }
 
         // Regular click: pure sine tone
