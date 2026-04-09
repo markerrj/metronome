@@ -36,12 +36,12 @@
       transition: border-color 0.1s ease;
     }
 
-    .metronome-circle.flash-green {
+    .metronome-circle.flash {
       border-color: #fff;
       border-width: 4px;
     }
 
-    .metronome-circle.flash-green-heavy {
+    .metronome-circle.flash-heavy {
       border-color: #fff;
       border-width: 12px;
     }
@@ -226,22 +226,22 @@
         osc.stop(audioContext.currentTime + 0.1);
       }
 
-      // Flash the circle green
+      // Flash the circle
       function flashCircle(isHeavyBeat) {
         initAudio();
         playClickSound(isHeavyBeat);
 
-        circle.classList.remove('flash-green', 'flash-green-heavy');
+        circle.classList.remove('flash', 'flash-heavy');
 
         // Trigger reflow to restart animation
         void circle.offsetWidth;
 
-        const flashClass = isHeavyBeat ? 'flash-green-heavy' : 'flash-green';
+        const flashClass = isHeavyBeat ? 'flash-heavy' : 'flash';
         circle.classList.add(flashClass);
 
         // Remove flash after animation
         setTimeout(() => {
-          circle.classList.remove('flash-green', 'flash-green-heavy');
+          circle.classList.remove('flash', 'flash-heavy');
         }, 100);
 
         clickCount++;
