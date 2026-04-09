@@ -86,9 +86,12 @@
       margin: 0;
     }
 
+    .bpm-input {
+      outline: none;
+      transition: box-shadow 0.2s ease;
+    }
+
     .bpm-input:focus {
-      outline: 3px solid rgba(0, 255, 0, 0.4);
-      outline-offset: 2px;
       box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
     }
 
@@ -97,17 +100,8 @@
       outline-offset: 2px;
     }
 
-    #bpmInput:hover,
-    #bpmInput:focus {
-      outline: none;
-    }
-
     .hover-glow {
       box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
-    }
-
-    .bpm-input {
-      transition: box-shadow 0.2s ease;
     }
 
     #playPauseBtn {
@@ -249,11 +243,8 @@
         // Trigger reflow to restart animation
         void circle.offsetWidth;
 
-        if (isHeavyBeat) {
-          circle.classList.add('flash-green-heavy');
-        } else {
-          circle.classList.add('flash-green');
-        }
+        const flashClass = isHeavyBeat ? 'flash-green-heavy' : 'flash-green';
+        circle.classList.add(flashClass);
 
         // Remove flash after animation
         setTimeout(() => {
@@ -312,6 +303,11 @@
         }
       }
 
+      // Clamp BPM to valid range
+      function clampBpm(bpm) {
+        return Math.max(MIN_BPM, Math.min(MAX_BPM, bpm));
+      }
+
       // Validate and update BPM
       function setBpm(value) {
         const parsed = parseInt(value, 10);
@@ -322,16 +318,9 @@
           return false;
         }
 
-        if (parsed < MIN_BPM) {
-          bpm = MIN_BPM;
-          bpmInput.value = MIN_BPM;
-        } else if (parsed > MAX_BPM) {
-          bpm = MAX_BPM;
-          bpmInput.value = MAX_BPM;
-        } else {
-          bpm = parsed;
-        }
-
+        const clampedBpm = clampBpm(parsed);
+        bpm = clampedBpm;
+        bpmInput.value = bpm;
         originalBpmValue = bpm;
         return true;
       }
@@ -340,40 +329,13 @@
       let pendingBpmValue = '';
 
       function handleBpmInput() {
-        const value = bpmInput.value;
-
-        if (value === '' || value === originalBpmValue) {
+        if (bpmInput.value === originalBpmValue) {
           return;
         }
 
-        const parsed = parseInt(value, 10);
-
-        if (isNaN(parsed)) {
-          bpmInput.value = originalBpmValue;
-          return;
-        }
-
-        let newBpm = parsed;
-
-        // Clamp to valid range
-        if (newBpm < MIN_BPM) {
-          newBpm = MIN_BPM;
-        } else if (newBpm > MAX_BPM) {
-          newBpm = MAX_BPM;
-        }
-
-        // Apply new BPM only if it differs from current
-        if (newBpm !== bpm) {
-          bpm = newBpm;
-          originalBpmValue = bpm;
-
-          // Update display immediately when user accepts value
-          bpmInput.value = bpm;
-
-          // If running, reschedule timing
-          if (isRunning && audioContext) {
-            scheduleNextClick();
-          }
+        setBpm(bpmInput.value);
+        if (isRunning && audioContext) {
+          scheduleNextClick();
         }
       }
 
@@ -385,23 +347,16 @@
 
       function handleBpmBlur() {
         circle.classList.remove('hover-glow');
-        // On blur, accept the value if it was valid
-        if (bpmInput.value !== pendingBpmValue) {
-          const parsed = parseInt(bpmInput.value, 10);
-          if (!isNaN(parsed) && parsed >= MIN_BPM && parsed <= MAX_BPM) {
-            bpm = parsed;
-            originalBpmValue = bpm;
-          } else if (parsed < MIN_BPM) {
-            bpm = MIN_BPM;
-            bpmInput.value = MIN_BPM;
-            originalBpmValue = bpm;
+        const value = bpmInput.value;
+        const parsed = parseInt(value, 10);
+
+        if (value !== pendingBpmValue) {
+          if (!isNaN(parsed) && parsed <= MAX_BPM) {
+            setBpm(value);
           } else if (parsed > MAX_BPM) {
-            bpm = MAX_BPM;
-            bpmInput.value = MAX_BPM;
-            originalBpmValue = bpm;
+            setBpm(MAX_BPM);
           } else {
-            // Invalid input, revert to original
-            bpmInput.value = originalBpmValue;
+            setBpm(originalBpmValue);
           }
         }
       }
@@ -466,14 +421,6 @@
             audioContext.resume();
           }
         }, { once: true });
-
-        document.addEventListener('keydown', (e) => {
-          if (document.activeElement === bpmInput && e.key === 'Enter') {
-            handleBpmInput();
-          } else if (document.activeElement === bpmInput && e.key === 'Escape') {
-            bpmInput.value = pendingBpmValue || originalBpmValue;
-          }
-        });
       }
 
       init();
