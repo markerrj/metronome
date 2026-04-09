@@ -44,20 +44,55 @@
       border-color: #00ff00;
     }
 
+    .metronome-circle.paused {
+      border-color: #333;
+      opacity: 0.7;
+    }
+
+    .metronome-circle.pulsing {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        border-color: #2a2a2a;
+      }
+      50% {
+        border-color: #444;
+      }
+    }
+
     .bpm-container {
       position: relative;
     }
 
-    #bpmInput {
+    .bpm-input {
       width: 180px;
       height: 120px;
       font-size: 72px;
       text-align: center;
       border: none;
-      outline: none;
       background-color: transparent;
       color: #333;
       font-weight: bold;
+      -moz-appearance: textfield;
+    }
+
+    .bpm-input::-webkit-outer-spin-button,
+    .bpm-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .bpm-input:focus {
+      outline: 3px solid rgba(0, 255, 0, 0.4);
+      outline-offset: 2px;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+    }
+
+    .bpm-input:focus-visible {
+      outline: 3px solid #00ff00;
+      outline-offset: 2px;
     }
 
     #bpmInput:hover,
@@ -67,7 +102,10 @@
 
     .hover-glow {
       box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
-      border: none;
+    }
+
+    .bpm-input {
+      transition: box-shadow 0.2s ease;
     }
 
     #playPauseBtn {
@@ -90,21 +128,43 @@
       transform: scale(0.98);
     }
 
-    #playPauseBtn.playing {
-      background-color: #d32f2f;
+    .play-pause-btn {
+      min-width: 180px;
     }
 
-    #playPauseBtn.playing:hover {
+    .play-pause-btn.running {
+      background-color: #d32f2f;
+      animation: pulse-btn 2s infinite;
+    }
+
+    .play-pause-btn.running:hover {
       background-color: #e53935;
+    }
+
+    .play-pause-btn.paused {
+      background-color: #333;
+    }
+
+    .play-pause-btn.paused:hover {
+      background-color: #444;
+    }
+
+    @keyframes pulse-btn {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.85;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="metronome-circle" id="circle">
-      <input type="text" id="bpmInput" value="100" maxlength="3" autocomplete="off">
+      <input type="text" id="bpmInput" class="bpm-input" value="100" maxlength="3" autocomplete="off" aria-live="polite" aria-label="BPM value">
     </div>
-    <button id="playPauseBtn" class="playing">Pause</button>
+    <button id="playPauseBtn" class="play-pause-btn paused">Play</button>
   </div>
 
   <script>
@@ -179,18 +239,26 @@
       }
 
       // Schedule next click using precise timing
+      let clickTimer = null;
+
       function scheduleNextClick() {
         if (!isRunning) return;
+
+        // Cancel any pending timeout to prevent duplicate clicks when BPM changes
+        if (clickTimer !== null) {
+          clearTimeout(clickTimer);
+        }
 
         const intervalMs = 60000 / bpm;
         nextClickTime = audioContext.currentTime * 1000 + intervalMs;
 
         // Schedule the click to happen at the exact calculated time
-        setTimeout(() => {
+        clickTimer = setTimeout(() => {
           if (isRunning) {
             const isHeavyBeat = clickCount % 4 === 3;
             flashCircle(isHeavyBeat);
           }
+          // Recursively schedule the next click
           scheduleNextClick();
         }, intervalMs - 10);
       }
@@ -202,11 +270,11 @@
         if (isRunning) {
           isRunning = false;
           playPauseBtn.textContent = 'Play';
-          playPauseBtn.classList.remove('playing');
+          playPauseBtn.classList.remove('running');
         } else {
           isRunning = true;
           playPauseBtn.textContent = 'Pause';
-          playPauseBtn.classList.add('playing');
+          playPauseBtn.classList.add('running');
 
           if (audioContext.state === 'suspended') {
             audioContext.resume();
@@ -244,46 +312,73 @@
       }
 
       // Event listeners for BPM input
+      let pendingBpmValue = '';
+
       function handleBpmInput() {
         const value = bpmInput.value;
 
-        if (value === '') {
-          // Empty input - show current BPM
-          bpmInput.value = originalBpmValue;
+        if (value === '' || value === originalBpmValue) {
           return;
         }
 
         const parsed = parseInt(value, 10);
 
-        if (!isNaN(parsed) && parsed >= MIN_BPM && parsed <= MAX_BPM) {
-          bpm = parsed;
-          originalBpmValue = bpm;
-
-          // Update display if running to reflect new tempo
-          if (isRunning && audioContext) {
-            const intervalMs = 60000 / bpm;
-            nextClickTime = audioContext.currentTime * 1000 + intervalMs;
-          }
-        } else if (parsed < MIN_BPM || parsed > MAX_BPM) {
-          // Clamp to valid range
-          if (parsed < MIN_BPM) {
-            bpm = MIN_BPM;
-          } else {
-            bpm = MAX_BPM;
-          }
-          originalBpmValue = bpm;
+        if (isNaN(parsed)) {
+          bpmInput.value = originalBpmValue;
+          return;
         }
 
-        bpmInput.value = bpm;
+        let newBpm = parsed;
+
+        // Clamp to valid range
+        if (newBpm < MIN_BPM) {
+          newBpm = MIN_BPM;
+        } else if (newBpm > MAX_BPM) {
+          newBpm = MAX_BPM;
+        }
+
+        // Apply new BPM only if it differs from current
+        if (newBpm !== bpm) {
+          bpm = newBpm;
+          originalBpmValue = bpm;
+
+          // Update display immediately when user accepts value
+          bpmInput.value = bpm;
+
+          // If running, reschedule timing
+          if (isRunning && audioContext) {
+            scheduleNextClick();
+          }
+        }
       }
 
       function handleBpmFocus() {
         originalBpmValue = bpm;
+        pendingBpmValue = bpm;
         circle.classList.add('hover-glow');
       }
 
       function handleBpmBlur() {
         circle.classList.remove('hover-glow');
+        // On blur, accept the value if it was valid
+        if (bpmInput.value !== pendingBpmValue) {
+          const parsed = parseInt(bpmInput.value, 10);
+          if (!isNaN(parsed) && parsed >= MIN_BPM && parsed <= MAX_BPM) {
+            bpm = parsed;
+            originalBpmValue = bpm;
+          } else if (parsed < MIN_BPM) {
+            bpm = MIN_BPM;
+            bpmInput.value = MIN_BPM;
+            originalBpmValue = bpm;
+          } else if (parsed > MAX_BPM) {
+            bpm = MAX_BPM;
+            bpmInput.value = MAX_BPM;
+            originalBpmValue = bpm;
+          } else {
+            // Invalid input, revert to original
+            bpmInput.value = originalBpmValue;
+          }
+        }
       }
 
       function handleBpmKeydown(e) {
@@ -291,13 +386,13 @@
           handleBpmInput();
           bpmInput.blur();
         } else if (e.key === 'Escape') {
-          bpmInput.value = originalBpmValue;
+          bpmInput.value = pendingBpmValue || originalBpmValue;
         }
       }
 
       // Mouse wheel handling for BPM adjustment
-      let lastScrollTime = 0;
-      let lastScrollDelta = 0;
+      let scrollAccumulator = 0;
+      let scrollLastTime = 0;
 
       function handleWheel(e) {
         e.preventDefault();
@@ -305,35 +400,40 @@
         const now = Date.now();
         const delta = e.deltaY;
 
-        // Calculate scroll speed to determine increment size
-        if (now - lastScrollTime < 200) {
-          const speed = Math.abs(delta - lastScrollDelta);
+        // Accumulate scroll to determine speed
+        scrollAccumulator += Math.abs(delta);
+        scrollLastTime = now;
 
-          if (speed > 50) {
-            // Fast scroll - change by 5 BPM
-            bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - Math.floor(delta / 10)));
-          } else {
-            // Slow scroll - change by 1 BPM
-            bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - (delta > 0 ? 1 : -1)));
-          }
-        } else {
-          // First scroll after pause - change by 1 BPM
-          bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm - (delta > 0 ? 1 : -1)));
+        // Reset accumulator if too much time has passed (new scroll session)
+        if (now - scrollLastTime > 300) {
+          scrollAccumulator = Math.abs(delta);
+          scrollLastTime = now;
         }
 
-        lastScrollTime = now;
-        lastScrollDelta = delta;
+        // Determine scroll speed: 100 pixels in 300ms = fast, otherwise slow
+        const scrollSpeed = scrollAccumulator / 300; // pixels per second
+        const increment = scrollSpeed >= 33 ? 5 : 1;
+
+        // Clamp delta to prevent extreme jumps within one scroll session
+        const clampedDelta = Math.min(scrollAccumulator, Math.max(delta, -scrollAccumulator));
+        const change = delta > 0 ? -increment : increment;
+
+        // Apply new BPM with clamping
+        const newBpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + change));
+        bpm = newBpm;
 
         // Update display immediately
         bpmInput.value = bpm;
 
         // If running, update timing
         if (isRunning && audioContext) {
-          const intervalMs = 60000 / bpm;
-          nextClickTime = audioContext.currentTime * 1000 + intervalMs;
+          scheduleNextClick();
         }
 
-        originalBpmValue = bpm;
+        // Reset for next scroll session
+        if (scrollAccumulator > 20) {
+          scrollAccumulator = 0;
+        }
       }
 
       // Initialize
@@ -345,7 +445,7 @@
         bpmInput.addEventListener('keydown', handleBpmKeydown);
         bpmInput.addEventListener('wheel', handleWheel, { passive: false });
 
-        // Auto-start on page load
+        // Auto-start on page load with 100 BPM
         setBpm(100);
         togglePlayPause();
 
@@ -360,7 +460,7 @@
           if (document.activeElement === bpmInput && e.key === 'Enter') {
             handleBpmInput();
           } else if (document.activeElement === bpmInput && e.key === 'Escape') {
-            bpmInput.value = originalBpmValue;
+            bpmInput.value = pendingBpmValue || originalBpmValue;
           }
         });
       }
