@@ -78,17 +78,14 @@
       color: #333;
       font-weight: bold;
       -moz-appearance: textfield;
+      outline: none;
+      transition: box-shadow 0.2s ease;
     }
 
     .bpm-input::-webkit-outer-spin-button,
     .bpm-input::-webkit-inner-spin-button {
       -webkit-appearance: none;
       margin: 0;
-    }
-
-    .bpm-input {
-      outline: none;
-      transition: box-shadow 0.2s ease;
     }
 
     .bpm-input:focus {
@@ -100,7 +97,7 @@
       outline-offset: 2px;
     }
 
-    .hover-glow {
+    .focus-glow {
       box-shadow: 0 0 30px rgba(128, 128, 128, 0.5);
     }
 
@@ -342,11 +339,11 @@
       function handleBpmFocus() {
         originalBpmValue = bpm;
         pendingBpmValue = bpm;
-        circle.classList.remove('hover-glow');
+        circle.classList.remove('focus-glow');
       }
 
       function handleBpmBlur() {
-        circle.classList.remove('hover-glow');
+        circle.classList.remove('focus-glow');
         const value = bpmInput.value;
         const parsed = parseInt(value, 10);
 
@@ -368,7 +365,7 @@
         } else if (e.key === 'Escape') {
           bpmInput.value = pendingBpmValue || originalBpmValue;
           bpmInput.blur();
-          circle.classList.remove('hover-glow');
+          circle.classList.remove('focus-glow');
         }
       }
 
