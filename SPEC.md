@@ -17,6 +17,6 @@ Below the BPM text field should be a single large play/pause button. Clicking th
 # Usability
 Users should be able to click on the BPM text field and directly input a new BPM with a keyboard. They should also be able to set the new BPM and have it start being used by hitting the enter key. For text editing like this, the new BPM only takes effect when enter key is hit. While editing the BPM field, but before the user hits enter key, hitting the escape key should reset the value of the BPM text field to the prior value.
 
-When the user's mouse cursor is hovering over the BPM text field, the BPM text field should have a glow around it. Moving the mouse scroll wheel should increment or decrement the BPM count by 1 BPM when scrolling slowly or by 5 BPM when scrolling quickly. When the BPM is adjusted by mouse wheel scrolling, the new BPM should take effect immediately without waiting for an enter key to be pressed.
+When the user's mouse cursor is hovering over the BPM text field, the BPM text field should have a glow around it. Moving the mouse scroll wheel should increment or decrement the BPM count by 1 BPM when scrolling slowly or by 10 BPM when scrolling quickly. When the BPM is adjusted by mouse wheel scrolling, the new BPM should take effect immediately without waiting for an enter key to be pressed.
 
 The metronome should be configured by default on first page load with 100bpm. The metronome should also be playing by default.

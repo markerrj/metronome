@@ -397,25 +397,14 @@
       function handleWheel(e) {
         e.preventDefault();
 
-        const now = Date.now();
         const delta = e.deltaY;
+        const absDelta = Math.abs(delta);
 
-        // Accumulate scroll to determine speed
-        scrollAccumulator += Math.abs(delta);
-        scrollLastTime = now;
+        // Determine scroll speed based on absolute scroll amount
+        // Large scrolls (>= 120 pixels) are "fast", small scrolls are "slow"
+        const increment = absDelta >= 240 ? 10 : 1;
 
-        // Reset accumulator if too much time has passed (new scroll session)
-        if (now - scrollLastTime > 300) {
-          scrollAccumulator = Math.abs(delta);
-          scrollLastTime = now;
-        }
-
-        // Determine scroll speed: 100 pixels in 300ms = fast, otherwise slow
-        const scrollSpeed = scrollAccumulator / 300; // pixels per second
-        const increment = scrollSpeed >= 33 ? 5 : 1;
-
-        // Clamp delta to prevent extreme jumps within one scroll session
-        const clampedDelta = Math.min(scrollAccumulator, Math.max(delta, -scrollAccumulator));
+        // Scroll up (negative delta) = increase BPM, Scroll down (positive delta) = decrease BPM
         const change = delta > 0 ? -increment : increment;
 
         // Apply new BPM with clamping
@@ -428,11 +417,6 @@
         // If running, update timing
         if (isRunning && audioContext) {
           scheduleNextClick();
-        }
-
-        // Reset for next scroll session
-        if (scrollAccumulator > 20) {
-          scrollAccumulator = 0;
         }
       }
 
