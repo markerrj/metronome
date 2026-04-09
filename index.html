@@ -226,7 +226,6 @@
           noiseGain.gain.setValueAtTime(0.6, audioContext.currentTime);
           noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
           noise.start(audioContext.currentTime);
-        } else {
         }
 
         // Regular click: pure sine tone
