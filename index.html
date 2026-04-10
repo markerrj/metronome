@@ -265,7 +265,7 @@
         // Schedule the click to happen at the exact calculated time
         clickTimer = setTimeout(() => {
           if (isRunning) {
-            const isHeavyBeat = clickCount % 4 === 3;
+            const isHeavyBeat = clickCount % 4 === 0;
             pulseCircle(isHeavyBeat);
           }
           // Recursively schedule the next click
