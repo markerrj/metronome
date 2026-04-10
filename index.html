@@ -79,9 +79,11 @@
     }
 
     .bpm-input {
-      width: 180px;
-      height: 120px;
-      font-size: 72px;
+      --bpm-input-width: 45vmin;
+      --bpm-input-height: 25vmin;
+      height: var(--bpm-input-height);
+      width: var(--bpm-input-width);
+      font-size: calc(var(--bpm-input-height) * .90);
       text-align: center;
       border: none;
       background-color: transparent;
