@@ -400,11 +400,7 @@
         const change = delta > 0 ? -increment : increment;
 
         // Apply new BPM with clamping
-        const newBpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + change));
-        bpm = newBpm;
-
-        // Update display immediately
-        bpmInput.value = bpm;
+        bpm = bpmInput.value = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + change));
 
         // If running, update timing
         if (isRunning && audioContext) {
@@ -415,52 +411,33 @@
       // Touch drag handling for mobile BPM adjustment (within .container)
       let isDragging = false;
       let touchStartY = 0;
-      let dragAccumulator = 0;
-      let dragLastTime = 0;
+      let touchStartBpm = 0;
       const container = document.querySelector('.container');
 
       function handleTouchStart(e) {
         if (!container || !container.contains(e.target)) return;
         isDragging = true;
         touchStartY = e.touches[0].clientY;
-        dragAccumulator = 0;
-        dragLastTime = Date.now();
+        touchStartBpm = bpm;
         e.preventDefault();
       }
 
       function handleTouchMove(e) {
         if (!isDragging) return;
 
-        const currentTime = Date.now();
         const deltaY = e.touches[0].clientY - touchStartY;
-        const deltaTime = currentTime - dragLastTime;
+        const absDeltaY = Math.abs(deltaY);
 
-        // Track velocity over time
-        if (deltaTime >= 16) {
-          // Smooth accumulator based on pixel velocity
-          const pixelsPerFrame = Math.abs(deltaY);
-          const increment = pixelsPerFrame >= 240 ? 10 : 1;
-          dragAccumulator += deltaY > 0 ? increment : -increment;
+        // Logarithmic algorithm: small moves give small changes, large moves give larger changes
+        // 5-10 pixels → 1-2 BPM change, up to 5 BPM per pixel for very large moves
+        const logFactor = Math.log10(1 + absDeltaY / 100) * 50;
+        const changePerFrame = Math.round(deltaY > 0 ? -logFactor : logFactor);
 
-          // Clamp the accumulator
-          dragAccumulator = Math.max(-50, Math.min(50, dragAccumulator));
-        }
+        bpm = bpmInput.value = clampBpm(touchStartBpm + changePerFrame);
 
-        touchStartY = e.touches[0].clientY;
-        dragLastTime = currentTime;
-
-        // Apply BPM change if enough velocity
-        if (Math.abs(dragAccumulator) >= 1) {
-          const change = dragAccumulator > 0 ? -1 : 1;
-          const newBpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + change));
-          bpm = newBpm;
-          dragAccumulator = 0; // Reset accumulator after each update
-          bpmInput.value = bpm;
-
-          // If running, update timing
-          if (isRunning && audioContext) {
-            scheduleNextClick();
-          }
+        // If running, update timing
+        if (isRunning && audioContext) {
+          scheduleNextClick();
         }
       }
 
