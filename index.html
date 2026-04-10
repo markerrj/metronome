@@ -33,34 +33,32 @@
       justify-content: center;
       align-items: center;
       background-color: #f5f5f5;
-      transition: border-color 0.1s ease;
+      transform-origin: center;
     }
 
-    .metronome-circle.flash {
-      border-color: #fff;
-      border-width: 4px;
-    }
-
-    .metronome-circle.flash-heavy {
-      border-color: #fff;
-      border-width: 12px;
-    }
-
-    .metronome-circle.paused {
-      border-color: #333;
-      opacity: 0.7;
+    .metronome-circle.pulsing-heavy {
+      animation: pulse-heavy 0.15s ease-out;
     }
 
     .metronome-circle.pulsing {
-      animation: pulse 1s infinite;
+      animation: pulse 0.15s ease-out;
     }
 
     @keyframes pulse {
-      0%, 100% {
-        border-color: #2a2a2a;
+      0% {
+        transform: scale(1);
       }
-      50% {
-        border-color: #444;
+      100% {
+        transform: scale(1.01);
+      }
+    }
+
+    @keyframes pulse-heavy {
+      0% {
+        transform: scale(1);
+      }
+      100% {
+        transform: scale(1.02);
       }
     }
 
@@ -226,23 +224,23 @@
         osc.stop(audioContext.currentTime + 0.1);
       }
 
-      // Flash the circle
-      function flashCircle(isHeavyBeat) {
+      // Pulse the circle
+      function pulseCircle(isHeavyBeat) {
         initAudio();
         playClickSound(isHeavyBeat);
 
-        circle.classList.remove('flash', 'flash-heavy');
+        circle.classList.remove('pulsing', 'pulsing-heavy');
 
         // Trigger reflow to restart animation
         void circle.offsetWidth;
 
-        const flashClass = isHeavyBeat ? 'flash-heavy' : 'flash';
-        circle.classList.add(flashClass);
+        const pulseClass = isHeavyBeat ? 'pulsing-heavy' : 'pulsing';
+        circle.classList.add(pulseClass);
 
-        // Remove flash after animation
+        // Remove pulse class after animation completes
         setTimeout(() => {
-          circle.classList.remove('flash', 'flash-heavy');
-        }, 100);
+          circle.classList.remove('pulsing', 'pulsing-heavy');
+        }, 150);
 
         clickCount++;
       }
@@ -265,7 +263,7 @@
         clickTimer = setTimeout(() => {
           if (isRunning) {
             const isHeavyBeat = clickCount % 4 === 3;
-            flashCircle(isHeavyBeat);
+            pulseCircle(isHeavyBeat);
           }
           // Recursively schedule the next click
           scheduleNextClick();
