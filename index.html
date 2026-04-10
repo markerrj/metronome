@@ -25,6 +25,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      height: 100vh;
+      justify-content: center;
+      position: relative;
+    }
+
+    .bottom-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .metronome-circle {
@@ -98,28 +107,33 @@
       outline-offset: 2px;
     }
 
-    #playPauseBtn {
-      margin-top: 40px;
-      padding: 20px 60px;
-      font-size: 28px;
+    .play-pause-btn {
+      --button-width: calc(100vw / 4);
+      --button-height: calc((100vh - 75vmin) / 2);
+      height: var(--button-height);
+      width: var(--button-width);
+      margin-top: calc(var(--button-height)/4);
+      padding: 0;
+      font-size: calc(var(--button-height) / 3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border: none;
       border-radius: 10px;
       cursor: pointer;
       background-color: #333;
       color: #fff;
       transition: background-color 0.2s ease, transform 0.1s ease;
+      min-height: 40px;
+      min-width: 120px;
     }
 
-    #playPauseBtn:hover {
+    .play-pause-btn:hover {
       background-color: #444;
     }
 
-    #playPauseBtn:active {
+    .play-pause-btn:active {
       transform: scale(0.98);
-    }
-
-    .play-pause-btn {
-      min-width: 180px;
     }
 
     .play-pause-btn.running {
@@ -154,7 +168,9 @@
     <div class="metronome-circle" id="circle">
       <input type="text" id="bpmInput" class="bpm-input" value="100" maxlength="3" autocomplete="off" aria-live="polite" aria-label="BPM value">
     </div>
-    <button id="playPauseBtn" class="play-pause-btn paused">Play</button>
+    <div class="bottom-wrapper">
+      <button id="playPauseBtn" class="play-pause-btn paused">Play</button>
+    </div>
   </div>
 
   <script>
