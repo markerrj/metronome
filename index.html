@@ -16,6 +16,9 @@
       align-items: center;
       background-color: #1a1a1a;
       font-family: sans-serif;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
     }
 
     .container {
@@ -403,6 +406,7 @@
         touchStartY = e.touches[0].clientY;
         dragAccumulator = 0;
         dragLastTime = Date.now();
+        e.preventDefault();
       }
 
       function handleTouchMove(e) {
@@ -417,7 +421,7 @@
           // Smooth accumulator based on pixel velocity
           const pixelsPerFrame = Math.abs(deltaY);
           const increment = pixelsPerFrame >= 240 ? 10 : 1;
-          dragAccumulator += deltaY > 0 ? -increment : increment;
+          dragAccumulator += deltaY > 0 ? increment : -increment;
 
           // Clamp the accumulator
           dragAccumulator = Math.max(-50, Math.min(50, dragAccumulator));
