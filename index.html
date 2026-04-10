@@ -390,6 +390,66 @@
         }
       }
 
+      // Touch drag handling for mobile BPM adjustment (within .container)
+      let isDragging = false;
+      let touchStartY = 0;
+      let dragAccumulator = 0;
+      let dragLastTime = 0;
+      const container = document.querySelector('.container');
+
+      function handleTouchStart(e) {
+        if (!container || !container.contains(e.target)) return;
+        isDragging = true;
+        touchStartY = e.touches[0].clientY;
+        dragAccumulator = 0;
+        dragLastTime = Date.now();
+      }
+
+      function handleTouchMove(e) {
+        if (!isDragging) return;
+
+        const currentTime = Date.now();
+        const deltaY = e.touches[0].clientY - touchStartY;
+        const deltaTime = currentTime - dragLastTime;
+
+        // Track velocity over time
+        if (deltaTime >= 16) {
+          // Smooth accumulator based on pixel velocity
+          const pixelsPerFrame = Math.abs(deltaY);
+          const increment = pixelsPerFrame >= 240 ? 10 : 1;
+          dragAccumulator += deltaY > 0 ? -increment : increment;
+
+          // Clamp the accumulator
+          dragAccumulator = Math.max(-50, Math.min(50, dragAccumulator));
+        }
+
+        touchStartY = e.touches[0].clientY;
+        dragLastTime = currentTime;
+
+        // Apply BPM change if enough velocity
+        if (Math.abs(dragAccumulator) >= 1) {
+          const change = dragAccumulator > 0 ? -1 : 1;
+          const newBpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + change));
+          bpm = newBpm;
+          dragAccumulator = 0; // Reset accumulator after each update
+          bpmInput.value = bpm;
+
+          // If running, update timing
+          if (isRunning && audioContext) {
+            scheduleNextClick();
+          }
+        }
+      }
+
+      function handleTouchEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+      }
+
+      function handleTouchCancel() {
+        isDragging = false;
+      }
+
       // Initialize
       function init() {
         playPauseBtn.addEventListener('click', togglePlayPause);
@@ -398,6 +458,12 @@
         bpmInput.addEventListener('blur', handleBpmBlur);
         bpmInput.addEventListener('keydown', handleBpmKeydown);
         bpmInput.addEventListener('wheel', handleWheel, { passive: false });
+
+        // Touch event listeners for mobile BPM adjustment
+        container.addEventListener('touchstart', handleTouchStart, { passive: true });
+        container.addEventListener('touchmove', handleTouchMove, { passive: false });
+        container.addEventListener('touchend', handleTouchEnd, { passive: true });
+        container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
         // Auto-start on page load with 100 BPM
         setBpm(100);
